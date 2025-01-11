@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lemonade Stand Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #fdf6e3;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            color: #ff8c00;
+        }
+
+        .game-container {
+            margin: 20px auto;
+            padding: 20px;
+            max-width: 600px;
+            background-color: #fff;
+            border: 2px solid #ffcc00;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .stats, .actions {
+            margin-bottom: 20px;
+        }
+
+        .actions button {
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .actions button:hover {
+            background-color: #ffcc00;
+            color: #fff;
+        }
+
+        .log {
+            text-align: left;
+            margin-top: 20px;
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-y: auto;
+            max-height: 200px;
+        }
+
+        .weather {
+            margin: 10px 0;
+            font-size: 18px;
+            color: #0077cc;
+        }
+
+        .day-info {
+            font-size: 16px;
+            color: #444;
+            margin: 10px 0;
+        }
+
+        .timer {
+            font-size: 18px;
+            color: red;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Lemonade Stand Game</h1>
+    <div class="game-container">
+        <div class="stats">
+            <p><strong>Money:</strong> $<span id="money">20.00</span></p>
+            <p><strong>Lemons:</strong> <span id="lemons">10</span></p>
+            <p><strong>Sugar:</strong> <span id="sugar">10</span></p>
+            <p><strong>Ice Cubes:</strong> <span id="ice">10</span></p>
+            <p><strong>Marketing Level:</strong> <span id="marketing-level">1</span></p>
+            <p><strong>Advertising Effect:</strong> +<span id="marketing-effect">10%</span> customers</p>
+            <p><strong>Stand Level:</strong> <span id="stand-level">1</span></p>
+            <p><strong>Supply Capacity:</strong> <span id="supply-capacity">20</span></p>
+        </div>
+        <div class="weather" id="weather">Weather: Sunny</div>
+        <div class="day-info" id="day-info">Day: 1 | Goal: Earn $15.00</div>
+        <div class="timer" id="timer">Time Left: 30 seconds</div>
+        <div class="actions">
+            <button onclick="buySupplies('lemons')">Buy Lemons ($<span id='cost-lemons'>2.00</span>)</button>
+            <button onclick="buySupplies('sugar')">Buy Sugar ($<span id='cost-sugar'>1.00</span>)</button>
+            <button onclick="buySupplies('ice')">Buy Ice ($<span id='cost-ice'>0.50</span>)</button>
+            <button onclick="sellLemonade()">Sell Lemonade ($<span id='lemonade-price'>5.00</span>)</button>
+            <button onclick="advertise()">Advertise ($5.00)</button>
+            <button onclick="upgradeStand()">Upgrade Stand ($20.00)</button>
+            <button onclick="upgradeMarketing()">Upgrade Marketing ($15.00)</button>
+        </div>
+        <div class="log" id="log"></div>
+    </div>
+
+    <script>
+        let money = 20.00;
+        let lemons = 10;
+        let sugar = 10;
+        let ice = 10;
+
+        let costs = {
+            lemons: 2.00,
+            sugar: 1.00,
+            ice: 0.50
+        };
+
+        let weather = "Sunny";
+        let lemonadePrice = 5.00;
+
+        let day = 1;
+        let dailyGoal = 15.00;
+        let timeLeft = 30;
+        let timerInterval;
+
+        let marketingLevel = 1;
+        let marketingEffect = 0.1; // 10% increase per level
+
+        let standLevel = 1;
+        let supplyCapacity = 20; // Max capacity for lemons, sugar, and ice
+
+        function updateStats() {
+            document.getElementById('money').innerText = money.toFixed(2);
+            document.getElementById('lemons').innerText = lemons;
+            document.getElementById('sugar').innerText = sugar;
+            document.getElementById('ice').innerText = ice;
+            document.getElementById('cost-lemons').innerText = costs.lemons.toFixed(2);
+            document.getElementById('cost-sugar').innerText = costs.sugar.toFixed(2);
+            document.getElementById('cost-ice').innerText = costs.ice.toFixed(2);
+            document.getElementById('lemonade-price').innerText = lemonadePrice.toFixed(2);
+            document.getElementById('weather').innerText = `Weather: ${weather}`;
+            document.getElementById('day-info').innerText = `Day: ${day} | Goal: Earn $${dailyGoal.toFixed(2)}`;
+            document.getElementById('timer').innerText = `Time Left: ${timeLeft} seconds`;
+            document.getElementById('marketing-level').innerText = marketingLevel;
+            document.getElementById('marketing-effect').innerText = (marketingEffect * 100).toFixed(0) + '%';
+            document.getElementById('stand-level').innerText = standLevel;
+            document.getElementById('supply-capacity').innerText = supplyCapacity;
+        }
+
+        function logMessage(message) {
+            const log = document.getElementById('log');
+            const entry = document.createElement('p');
+            entry.innerText = message;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function randomizeCosts() {
+            costs.lemons = parseFloat((Math.random() * 1 + 1.5).toFixed(2)); // Between $1.50 and $2.50
+            costs.sugar = parseFloat((Math.random() * 0.5 + 0.75).toFixed(2)); // Between $0.75 and $1.25
+            costs.ice = parseFloat((Math.random() * 0.3 + 0.4).toFixed(2)); // Between $0.40 and $0.70
+            updateStats();
+        }
+
+        function randomizeWeather() {
+            const weatherTypes = ["Hot", "Sunny", "Cold", "Rainy"];
+            weather = weatherTypes[Math.floor(Math.random() * weatherTypes.length)];
+
+            if (weather === "Hot") {
+                lemonadePrice = 6.00; // Higher demand
+            } else if (weather === "Sunny") {
+                lemonadePrice = 5.00; // Normal price
+            } else if (weather === "Cold") {
+                lemonadePrice = 4.00; // Lower demand
+            } else if (weather === "Rainy") {
+                lemonadePrice = 3.00; // Much lower demand
+            }
+
+            updateStats();
+        }
+
+        function buySupplies(type) {
+            const cost = costs[type];
+            if (money >= cost) {
+                if ((lemons + sugar + ice) < supplyCapacity) {
+                    money -= cost;
+                    if (type === 'lemons') lemons++;
+                    if (type === 'sugar') sugar++;
+                    if (type === 'ice') ice++;
+                    updateStats();
+                    logMessage(`Bought 1 ${type} for $${cost.toFixed(2)}.`);
+                    randomizeCosts();
+                } else {
+                    logMessage("Not enough storage capacity for more supplies.");
+                }
+            } else {
+                logMessage(`Not enough money to buy ${type}.`);
+            }
+        }
+
+        function sellLemonade() {
+            if (lemons >= 1 && sugar >= 1 && ice >= 1) {
+                let customerMultiplier = 1 + (marketingEffect * marketingLevel);
+                if (weather === "Hot") customerMultiplier += 0.5; // Boost in hot weather
+                if (weather === "Rainy") customerMultiplier -= 0.3; // Drop in rainy weather
+
+                const sales = Math.max(1, Math.floor(customerMultiplier * 10));
+                for (let i = 0; i < sales; i++) {
+                    if (lemons > 0 && sugar > 0 && ice > 0) {
+                        lemons--;
+                        sugar--;
+                        ice--;
+                        money += lemonadePrice;
+                    }
+                }
+                updateStats();
+                logMessage(`Sold ${sales} cups of lemonade! Total earned: $${(sales * lemonadePrice).toFixed(2)}`);
+            } else {
+                logMessage('Not enough supplies to sell lemonade.');
+            }
+        }
+
+        function advertise() {
+            const adCost = 5.00;
+            if (money >= adCost) {
+                money -= adCost;
+                marketingLevel++;
+                marketingEffect += 0.1;
+                updateStats();
+                logMessage(`Invested $${adCost.toFixed(2)} in advertising. Marketing level increased to ${marketingLevel}.`);
+            } else {
+                logMessage("Not enough money to advertise.");
+            }
+        }
+
+        function spoilSupplies() {
+            // Spoilage mechanics
+            const spoiledLemons = Math.floor(lemons * 0.1); // 10% of lemons spoil
+            const spoiledSugar = day % 2 === 0 ? Math.floor(sugar * 0.05) : 0; // 5% of sugar spoils every two days
+            const meltedIce = ice; // All ice melts at the end of the day
+
+            lemons -= spoiledLemons;
+            sugar -= spoiledSugar;
+            ice = 0;
+
+            if (lemons < 0) lemons = 0;
+            if (sugar < 0) sugar = 0;
+
+            logMessage(`Spoilage report: ${spoiledLemons} lemons spoiled, ${spoiledSugar} sugar spoiled, all ice melted.`);
+        }
+
+        function upgradeStand() {
+            const upgradeCost = 20.00;
+            if (money >= upgradeCost) {
+                money -= upgradeCost;
+                standLevel++;
+                supplyCapacity += 10; // Increase capacity by 10 per upgrade
+                updateStats();
+                logMessage(`Upgraded stand to level ${standLevel}. Supply capacity increased to ${supplyCapacity}.`);
+            } else {
+                logMessage("Not enough money to upgrade the stand.");
+            }
+        }
+
+        function upgradeMarketing() {
+            const upgradeCost = 15.00;
+            if (money >= upgradeCost) {
+                money -= upgradeCost;
+                marketingLevel++;
+                marketingEffect += 0.1; // Increase marketing effect by 10%
+                updateStats();
+                logMessage(`Upgraded marketing to level ${marketingLevel}. Advertising effect increased.`);
+            } else {
+                logMessage("Not enough money to upgrade marketing.");
+            }
+        }
+
+        function startDayTimer() {
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    endDay();
+                }
+                updateStats();
+            }, 1000);
+        }
+
+        function endDay() {
+            logMessage(`Day ${day} ended. Total money: $${money.toFixed(2)}.`);
+            spoilSupplies();
+            if (money >= dailyGoal) {
+                logMessage(`You met your goal for the day! Moving to day ${day + 1}.`);
+                day++;
+                dailyGoal += 10.00; // Increase daily goal
+                timeLeft = 30; // Reset timer
+                randomizeWeather();
+                startDayTimer();
+            } else {
+                logMessage("You didn't meet your goal. Game over.");
+            }
+            updateStats();
+        }
+
+        randomizeWeather();
+        updateStats();
+        startDayTimer();
+    </script>
+</body>
+</html>
